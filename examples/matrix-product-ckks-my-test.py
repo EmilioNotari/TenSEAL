@@ -3,17 +3,17 @@ import tenseal as ts
 import numpy as np
 import time
 
-def create_ckks_context(enable_bootstrapping=False):
+def create_ckks_context(enable_relinearization=False):
     context = ts.context(
         scheme=ts.SCHEME_TYPE.CKKS,
-        poly_modulus_degree=8192,
+        poly_modulus_degree=8192,   # no puede pasar de 32768 -   inferior a 8192 se considera inseguro
         coeff_mod_bit_sizes=[60, 40, 40, 60]
     )
     
     context.global_scale = 2**40  #Para trabajar con números reales.
     context.generate_galois_keys()
 
-    if enable_bootstrapping:
+    if enable_relinearization:
         context.generate_relin_keys()
 
     return context
@@ -27,7 +27,7 @@ def decrypt_matrix(encrypted_matrix, context):
     return [[vec.decrypt()[0] for vec in row] for row in encrypted_matrix]
 
 
-def matrix_multiplication_ckks(matrix1, matrix2, context):
+def matrix_multiplication_ckks(matrix1, matrix2):
     rows1, cols1 = len(matrix1), len(matrix1[0])
     rows2, cols2 = len(matrix2), len(matrix2[0])
 
@@ -46,16 +46,9 @@ def matrix_multiplication_ckks(matrix1, matrix2, context):
     return result
 
 
-def main(enable_bootstrapping=False):
+def main(enable_relinearization=False):
     # Crear contexto
-    context = create_ckks_context(enable_bootstrapping)
-
-    # Generar matrices con valores decimales
-    matrix1 = np.random.uniform(0.1, 5.0, (4, 4)).tolist()
-    matrix2 = np.random.uniform(0.1, 5.0, (4, 4)).tolist()
-
-    #print("\nMatriz 1 (original):", matrix1)
-    #print("Matriz 2 (original):", matrix2)
+    context = create_ckks_context(enable_relinearization)
     
     # Medición del tiempo de ejecución
     start_time = time.time()
@@ -65,22 +58,34 @@ def main(enable_bootstrapping=False):
     enc_matrix2 = encrypt_matrix(matrix2, context)
 
     # Multiplicación de matrices cifradas
-    enc_result = matrix_multiplication_ckks(enc_matrix1, enc_matrix2, context)
+    enc_result = matrix_multiplication_ckks(enc_matrix1, enc_matrix2)
     
     end_time = time.time()
 
     # Descifrar resultado
     decrypted_result = decrypt_matrix(enc_result, context)
 
-    #print("\nMatriz resultado (descifrada):", decrypted_result)
+    print("\nMatriz resultado (descifrada):", decrypted_result)
     
     # Impresión del tiempo de ejecución
     print(f"Tiempo de ejecución: {end_time - start_time} segundos")
 
 
 if __name__ == "__main__":
-    print("Ejecución SIN bootstrapping:")
-    main(enable_bootstrapping=False)
+    # Generar matrices con valores decimales
+    matrix1 = np.random.uniform(0.1, 10.0, (3, 3)).tolist()
+    matrix2 = np.random.uniform(0.1, 10.0, (3, 3)).tolist()
+    
+    print("Matriz 1 (original):", matrix1)
+    print("Matriz 2 (original):", matrix2)
+    
+    print("\nEjecución SIN relinearización:")
+    main(enable_relinearization=False)
 
-    print("\nEjecución CON bootstrapping:")
-    main(enable_bootstrapping=True)
+    print("\nEjecución CON relinearización:")
+    main(enable_relinearization=True)
+    
+    print("\nMATRIZ ESPERADA: ")
+    result = matrix_multiplication_ckks(matrix1, matrix2)
+    print(result)
+    

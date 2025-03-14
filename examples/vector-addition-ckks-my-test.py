@@ -18,8 +18,8 @@ def main(n_items):
     vec1 = np.random.uniform(1, 100, n_items).tolist()
     vec2 = np.random.uniform(1, 100, n_items).tolist()
 
-    # print("Vector 1:", vec1)
-    # print("Vector 2:", vec2)
+    #print("Vector 1:", vec1)
+    #print("Vector 2:", vec2)
     
     # Medición del tiempo de ejecución
     start_time = time.time()
@@ -42,5 +42,5 @@ def main(n_items):
     print(f"Tiempo de ejecución: {end_time - start_time} segundos")
 
 if __name__ == "__main__":
-    n_items = 10000000  
+    n_items = 100000  
     main(n_items)

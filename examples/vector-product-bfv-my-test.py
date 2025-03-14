@@ -33,5 +33,5 @@ def main(n_items):
     print(f"Tiempo de ejecución: {end_time - start_time} segundos")
 
 if __name__ == "__main__":
-    n_items = 1000000 
+    n_items = 1000 
     main(n_items)
