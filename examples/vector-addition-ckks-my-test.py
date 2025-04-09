@@ -1,6 +1,7 @@
 import tenseal as ts
 import numpy as np
 import time
+import ctypes.util
 
 
 # ---- DEMO ----
@@ -18,8 +19,8 @@ def main(n_items):
     vec1 = np.random.uniform(1, 100, n_items).tolist()
     vec2 = np.random.uniform(1, 100, n_items).tolist()
 
-    #print("Vector 1:", vec1)
-    #print("Vector 2:", vec2)
+    print("Vector 1:", vec1)
+    print("Vector 2:", vec2)
     
     # Medición del tiempo de ejecución
     start_time = time.time()
@@ -36,11 +37,11 @@ def main(n_items):
     # Descifrar el resultado
     decrypted_result = encrypted_result.decrypt()
 
-    #print("Resultado descifrado:", decrypted_result)
+    print("Resultado descifrado:", decrypted_result)
     
     # Impresión del tiempo de ejecución
     print(f"Tiempo de ejecución: {end_time - start_time} segundos")
 
 if __name__ == "__main__":
-    n_items = 100000  
+    n_items = 3  
     main(n_items)

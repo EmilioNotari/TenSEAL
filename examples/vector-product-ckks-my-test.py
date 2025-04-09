@@ -39,5 +39,5 @@ def main(n_items):
 
 
 if __name__ == "__main__":
-    n_items = 10000000
+    n_items = 100
     main(n_items)
