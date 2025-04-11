@@ -11,7 +11,7 @@ class SimulatedBFVBootstrapper:
         self.max_ops = max_ops
         self.op_count = 0 
 
-    def refresh_if_needed(self, ct):
+    def bootstrapp(self, ct):
         """
         Simula el bootstrapping si se supera el umbral de operaciones.
         """

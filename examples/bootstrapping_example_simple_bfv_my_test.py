@@ -14,15 +14,15 @@ def main():
     bootstrapper = SimulatedBFVBootstrapper(context, max_ops=2)
 
     # Cifrar un número
-    ct = ts.bfv_vector(context, [5])
-    print("Inicial:", ct.decrypt())
+    ciphertext = ts.bfv_vector(context, [5])
+    print("Inicial:", ciphertext.decrypt())
 
     # Simulamos operaciones homomórficas
     for i in range(6):
         print(f"\nIteración {i+1}")
-        ct = ct * 2
-        ct = bootstrapper.refresh_if_needed(ct)
-        print("Valor:", ct.decrypt())
+        ciphertext = ciphertext * 2
+        ciphertext = bootstrapper.bootstrapp(ciphertext)
+        print("Valor:", ciphertext.decrypt())
 
 if __name__ == "__main__":
     main()

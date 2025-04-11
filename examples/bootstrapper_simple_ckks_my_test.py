@@ -1,38 +1,21 @@
 import tenseal as ts
 
-class SimulatedCKKSBootstrapper:
-    def __init__(self, context, max_niveles=6, min_niveles=2):
-        self.context = context
-        self.max_niveles = max_niveles
-        self.min_niveles = min_niveles
-        self.niveles_restantes = max_niveles
-        self.scale = context.global_scale
+class SimpleCKKSBootstrapper:
+    def __init__(self, client_context, public_context):
+        self.client_context = client_context  # con clave secreta
+        self.public_context = public_context  # sin clave secreta
+        self.scale = public_context.global_scale
 
-    def apply_operation(self, ciphertext):
-        """Simula una operación homomórfica que consume un nivel."""
-        self.niveles_restantes -= 1
-        print(f"🔸 Operación: niveles restantes = {self.niveles_restantes}")
-        return ciphertext * ciphertext
+    def bootstrap(self, ciphertext_serialized):
+        # Crear ckks_vector desde serializado (sin secret_key en contexto público)
+        ciphertext = ts.ckks_vector_from(self.client_context, ciphertext_serialized)
 
-    def should_bootstrap(self):
-        return self.niveles_restantes < self.min_niveles
+        # 1. Desencriptar
+        plaintext = ciphertext.decrypt()
+        print(f"[Bootstrapping] Desencriptado: {plaintext}")
 
-    def bootstrap(self, ciphertext):
-        """Bootstrapping simulado: reduce el ruido, pero no recupera niveles."""
-        print(f"Bootstrapping aplicado (niveles restantes: {self.niveles_restantes})")
-        try:
-            # Simulamos reducción del ruido re-cifrando con escala original
-            size = len(ciphertext.decrypt())
-            result = ciphertext.polyval([0.0, 1.0])  # f(x) = x (identidad)
-            new_ct = ts.ckks_vector(self.context, [0] * size)
-            new_ct += result
-            # NO se aumentan niveles
-            return new_ct
-        except Exception as e:
-            print(f"Error durante el bootstrapping: {e}")
-            return ciphertext
+        # 2. Reencriptar usando el contexto público
+        reciphered = ts.ckks_vector(self.public_context, plaintext)
+        print(f"[Bootstrapping] Reencriptado. Niveles restaurados.")
 
-    def process(self, ciphertext):
-        if self.should_bootstrap():
-            ciphertext = self.bootstrap(ciphertext)
-        return ciphertext
+        return reciphered
