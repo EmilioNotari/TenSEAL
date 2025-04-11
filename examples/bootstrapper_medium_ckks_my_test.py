@@ -6,19 +6,23 @@ class MediumCKKSBootstrapper:
         self.context = context
         self.default_scale = context.global_scale
         self.target_scale = target_scale or self.default_scale
+        self.SMOOTHING_FACTOR = 0.01
 
     def normalize(self, ciphertext):
-        """
-        Simula el reescalado homomórfico: reduce la escala del ciphertext.
-        """
-        current_scale = ciphertext.scale
-        print(f"[Normalize] Escala actual: {current_scale:.2e}")
+        seal_ciphertext = ciphertext.ciphertext()
+        current_scale = seal_ciphertext[0].scale
+        print(f"[Normalize] Escala actual: {current_scale}")
 
         if current_scale > self.target_scale:
             factor = current_scale / self.target_scale
-            ciphertext /= factor            
+            decrypted = ciphertext.decrypt()
+            print(f"[Normalize] Decrypted: {decrypted}")
+            
+            # Ajustamos con un divisor más suave (factor raíz cuadrada)
+            normalized_data = [elem / factor for elem in decrypted]
             print(f"[Normalize] Aplicado divisor de reescalado: {factor:.2e}")
-        else:              
+            ciphertext = ts.ckks_vector(self.context, normalized_data)
+        else:
             print("[Normalize] No se necesita normalización")
 
         return ciphertext
@@ -52,7 +56,7 @@ class MediumCKKSBootstrapper:
         Simula el proceso de FFT para polinomios en el ciphertext.
         Aquí solo vamos a aplicar una transformación FFT a los datos del ciphertext.
         """        
-        data = ciphertext.decrypt()
+        data = ciphertext #ciphertext.decrypt()
         print(f"[FFT] Datos antes de FFT: {data}")
         
         # Aplicamos FFT real sobre los valores cifrados (simulado)
@@ -61,47 +65,56 @@ class MediumCKKSBootstrapper:
         print(f"[FFT] Datos después de FFT: {fft_result}")
         
         # Convertimos de nuevo el resultado de FFT a un vector cifrado
-        result_ciphertext = ts.ckks_vector(self.context, np.real(fft_result)) 
-        return result_ciphertext
+        #result_ciphertext = ts.ckks_vector(self.context, np.real(fft_result)) 
+        return fft_result #result_ciphertext
 
     def bootstrap(self, ciphertext):
-        """
-        Simula el bootstrapping:
-        1. Interpolación de Hermite
-        2. FFT para el polinomio encriptado
-        3. Normalización (reescalado)
-        """
-        print("[Bootstrap] Simulación de bootstrapping con interpolación y FFT")
+        print("[Bootstrap] Simulación de bootstrapping con interpolación y FFT (estabilizado)")
 
         try:
-            # Paso 1: Aplicar interpolación de Hermite (simulada)
-            # Tomamos datos de la encriptación para usarlo como puntos x, y y derivadas (dydx)
-            x = np.linspace(0, 1, len(ciphertext.decrypt()))  # Puntos de interpolación
-            y = ciphertext.decrypt()  # Valores de ciphertext
-            dydx = np.gradient(y)  # Derivada aproximada (en este ejemplo simplificado)
-            
-            # Interpolación de Hermite
-            H = self.interpolate_hermite(x, y, dydx)
-            print(f"[Bootstrap] Interpolación de Hermite: \n{H}")
-            
-            # Duplicamos los valores de y y dydx para que coincidan con H
-            y_ext = np.repeat(y, 2)
-            dydx_ext = np.repeat(dydx, 2)
-            
-            # Simulamos un "reconstrucción" con el polinomio interpolado de Hermite
-            # Aquí simplemente tomamos el primer término para simplificar la simulación
-            result = np.dot(H, y_ext)  # Esto sería un ejemplo simple de reconstrucción
-            
-            # Reconstrucción del ciphertext (de manera simplificada, en un caso real usaríamos otros métodos)
-            reconstructed_ciphertext = ts.ckks_vector(self.context, result)            
+            # Paso 1: Desencriptamos y normalizamos
+            y = ciphertext.decrypt()
+            x = np.linspace(0, 1, len(y))
+            print(f"[Bootstrap] x: {x}")
+            print(f"[Bootstrap] y (original): {y}")
 
-            # Paso 2: Aplicar FFT al ciphertext (simulación)
-            reconstructed_ciphertext = self.fast_fourier_transformation(reconstructed_ciphertext)
+            # Escalamos para estabilizar Hermite
+            scale_factor = max(abs(v) for v in y)
+            y_scaled = [v / scale_factor for v in y]
+            print(f"[Bootstrap] y escalado: {y_scaled}")
 
-            # Paso 3: Normalización / reescalado
-            reconstructed_ciphertext = self.normalize(reconstructed_ciphertext)
+            # Derivadas aproximadas
+            dydx = np.gradient(y_scaled)
+            print(f"[Bootstrap] dydx: {dydx}")
+
+            # Interpolación Hermite (sin cambios)
+            H = self.interpolate_hermite(x, y_scaled, dydx)
+            y_ext = np.repeat(y_scaled, 2)
+
+            hermite_result = np.dot(H, y_ext)
+            print(f"[Bootstrap] Hermite result: {hermite_result}")
+
+            # Solo aplicamos una corrección leve basada en Hermite
+            result = y_scaled + self.SMOOTHING_FACTOR * hermite_result[:len(y_scaled)]
+            result *= scale_factor  # Reescalamos de vuelta
+            print(f"[Bootstrap] Resultado tras Hermite ajustado: {result}")
+
+            # Recreamos el ciphertext
+            #reconstructed_ciphertext = ts.ckks_vector(self.context, result)
+
+            # Paso 2: FFT
+            reconstructed_ciphertext = self.fast_fourier_transformation(result) #reconstructed_Ct
+
+            # Paso 2.5: IFFT
+            ifft_data = np.fft.ifft(reconstructed_ciphertext)  #reconstructed_ct.decrypt()
+            recovered = np.real(ifft_data)
+            print(f"[Bootstrap] Recuperado tras IFFT: {recovered}")
+
+            # Paso 3: Reencriptar
+            reconstructed_ciphertext = ts.ckks_vector(self.context, recovered)
 
             return reconstructed_ciphertext
+
         except Exception as e:
             print(f"[Bootstrap] Error: {e}")
             return ciphertext
