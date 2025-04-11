@@ -11,17 +11,29 @@ class MediumCKKSBootstrapper:
         """
         Simula el reescalado homomórfico: reduce la escala del ciphertext.
         """
-        current_scale = ciphertext.scale
-        print(f"[Normalize] Escala actual: {current_scale:.2e}")
+        seal_ciphertext = ciphertext.ciphertext()
+        print(f"[Normalize] Seal ciphertext: {seal_ciphertext}")
+        current_scale = seal_ciphertext[0].scale
+        print(f"[Normalize] Escala actual: {current_scale}")
 
         if current_scale > self.target_scale:
             factor = current_scale / self.target_scale
-            ciphertext /= factor            
+            decrypted = ciphertext.decrypt()
+            print(f"[Normalize] Decrypted: {decrypted}")
+
+            # Dividir cada elemento desencriptado por el factor
+            normalized_data = [elem / factor for elem in decrypted]
             print(f"[Normalize] Aplicado divisor de reescalado: {factor:.2e}")
+
+            # Vuelve a cifrar los datos normalizados
+            ciphertext = ts.ckks_vector(self.context, normalized_data)
+
         else:              
             print("[Normalize] No se necesita normalización")
 
         return ciphertext
+
+
 
     def interpolate_hermite(self, x, y, dydx):
         """

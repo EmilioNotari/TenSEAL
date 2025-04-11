@@ -20,7 +20,7 @@ def main():
 
     for i in range(2):
         print(f"\n########## Iteración {i+1} ##########\n")
-        ciphertext *= 10  # Aumenta la escala
+        ciphertext *= 10  # Aumenta la escala (2^40 * 2^40 = 2^80)
         ciphertext = bootstrapper.bootstrap(ciphertext)
         print("Resultado:", ciphertext.decrypt())
 
