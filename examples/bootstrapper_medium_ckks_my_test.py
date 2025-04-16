@@ -27,6 +27,8 @@ class MediumCKKSBootstrapper:
 
         return ciphertext
 
+
+
     def interpolate_hermite(self, x, y, dydx):
         """
         Simula la interpolación de Hermite (polinomio de Hermite).
