@@ -85,7 +85,7 @@ class MediumCKKSBootstrapper:
 
             # Derivadas aproximadas
             dydx = np.gradient(y_scaled)
-            print(f"[Bootstrap] dydx: {dydx}")
+            print(f"[Bootstrap] dydx: {dydx}") 
 
             # Interpolación Hermite (sin cambios)
             H = self.interpolate_hermite(x, y_scaled, dydx)
