@@ -74,7 +74,7 @@ class MediumCKKSBootstrapper:
         try:
             # Paso 1: Desencriptamos y normalizamos
             y = ciphertext.decrypt() #test
-            x = np.linspace(0, 1, len(y))
+            x = np.linspace(0, 1, len(y)) #
             print(f"[Bootstrap] x: {x}")
             print(f"[Bootstrap] y (original): {y}")
 
