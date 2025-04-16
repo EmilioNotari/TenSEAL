@@ -10,15 +10,16 @@ def main():
     context.global_scale = 2**40
     context.generate_galois_keys()
     context.generate_relin_keys()
+    context.auto_rescale = True
 
     data = [1.0, 2.0, 3.0]
     ciphertext = ts.ckks_vector(context, data)
 
     print("\n\tINICIAL:", ciphertext.decrypt())
 
-    bootstrapper = MediumCKKSBootstrapper(context, target_scale=2**20)
+    bootstrapper = MediumCKKSBootstrapper(context)
 
-    for i in range(2):
+    for i in range(3):
         print(f"\n########## Iteración {i+1} ##########\n")
         ciphertext *= 10  # Aumenta la escala (2^40 * 2^40 = 2^80)
         ciphertext = bootstrapper.bootstrap(ciphertext)

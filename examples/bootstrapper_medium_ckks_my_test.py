@@ -2,30 +2,29 @@ import tenseal as ts
 import numpy as np
 
 class MediumCKKSBootstrapper:
-    def __init__(self, context, target_scale=None):
+    def __init__(self, context):
         self.context = context
         self.default_scale = context.global_scale
-        self.target_scale = target_scale or self.default_scale
         self.SMOOTHING_FACTOR = 0.01
 
-    def normalize(self, ciphertext):
-        seal_ciphertext = ciphertext.ciphertext()
-        current_scale = seal_ciphertext[0].scale
-        print(f"[Normalize] Escala actual: {current_scale}")
+    # def normalize(self, ciphertext):
+    #     seal_ciphertext = ciphertext.ciphertext()
+    #     current_scale = seal_ciphertext[0].scale
+    #     print(f"[Normalize] Escala actual: {current_scale}")
 
-        if current_scale > self.target_scale:
-            factor = current_scale / self.target_scale
-            decrypted = ciphertext.decrypt()
-            print(f"[Normalize] Decrypted: {decrypted}")
+    #     if current_scale > self.target_scale:
+    #         factor = current_scale / self.target_scale
+    #         decrypted = ciphertext.decrypt()
+    #         print(f"[Normalize] Decrypted: {decrypted}")
             
-            # Ajustamos con un divisor más suave (factor raíz cuadrada)
-            normalized_data = [elem / factor for elem in decrypted]
-            print(f"[Normalize] Aplicado divisor de reescalado: {factor:.2e}")
-            ciphertext = ts.ckks_vector(self.context, normalized_data)
-        else:
-            print("[Normalize] No se necesita normalización")
+    #         # Ajustamos con un divisor más suave (factor raíz cuadrada)
+    #         normalized_data = [elem / factor for elem in decrypted]
+    #         print(f"[Normalize] Aplicado divisor de reescalado: {factor:.2e}")
+    #         ciphertext = ts.ckks_vector(self.context, normalized_data)
+    #     else:
+    #         print("[Normalize] No se necesita normalización")
 
-        return ciphertext
+    #     return ciphertext
 
 
 
@@ -45,12 +44,10 @@ class MediumCKKSBootstrapper:
             if i < n - 1:
                 H[2*i + 1][1] = dydx[i]
         
-        # Usamos la fórmula de interpolación para llenar la matriz
         for i in range(1, n):
             for j in range(i, n):
                 H[i][j] = H[i][j - 1] + (x[j] - x[i]) * dydx[i]  # Simplificación
 
-        # Devolvemos la interpolación de Hermite (puede adaptarse a un polinomio específico)
         return H
 
     def fast_fourier_transformation(self, ciphertext):
@@ -58,7 +55,7 @@ class MediumCKKSBootstrapper:
         Simula el proceso de FFT para polinomios en el ciphertext.
         Aquí solo vamos a aplicar una transformación FFT a los datos del ciphertext.
         """        
-        data = ciphertext #ciphertext.decrypt()
+        data = ciphertext.decrypt()
         print(f"[FFT] Datos antes de FFT: {data}")
         
         # Aplicamos FFT real sobre los valores cifrados (simulado)
@@ -67,8 +64,8 @@ class MediumCKKSBootstrapper:
         print(f"[FFT] Datos después de FFT: {fft_result}")
         
         # Convertimos de nuevo el resultado de FFT a un vector cifrado
-        #result_ciphertext = ts.ckks_vector(self.context, np.real(fft_result)) 
-        return fft_result #result_ciphertext
+        result_ciphertext = ts.ckks_vector(self.context, np.real(fft_result)) 
+        return result_ciphertext
 
     def bootstrap(self, ciphertext):
         print("[Bootstrap] Simulación de bootstrapping con interpolación y FFT (estabilizado)")
@@ -78,10 +75,10 @@ class MediumCKKSBootstrapper:
             y = ciphertext.decrypt() 
             x = np.linspace(0, 1, len(y)) 
             print(f"[Bootstrap] x: {x}")
-            print(f"[Bootstrap] y (original): {y}")
 
             # Escalamos para estabilizar Hermite
             scale_factor = max(abs(v) for v in y)
+            print(f"[Bootstrap] scale_factor: {scale_factor}")
             y_scaled = [v / scale_factor for v in y]
             print(f"[Bootstrap] y escalado: {y_scaled}")
 
@@ -102,19 +99,23 @@ class MediumCKKSBootstrapper:
             print(f"[Bootstrap] Resultado tras Hermite ajustado: {result}")
 
             # Recreamos el ciphertext
-            #reconstructed_ciphertext = ts.ckks_vector(self.context, result)
+            reconstructed_ciphertext = ts.ckks_vector(self.context, result)
 
             # Paso 2: FFT
-            reconstructed_ciphertext = self.fast_fourier_transformation(result) #reconstructed_Ct
+            reconstructed_ciphertext = self.fast_fourier_transformation(reconstructed_ciphertext) #reconstructed_Ct
 
             # Paso 2.5: IFFT
-            ifft_data = np.fft.ifft(reconstructed_ciphertext)  #reconstructed_ct.decrypt()
+            ifft_data = np.fft.ifft(reconstructed_ciphertext.decrypt())  
             recovered = np.real(ifft_data)
             print(f"[Bootstrap] Recuperado tras IFFT: {recovered}")
 
             # Paso 3: Reencriptar
             reconstructed_ciphertext = ts.ckks_vector(self.context, recovered)
-
+            
+            seal_ciphertext = reconstructed_ciphertext.ciphertext()
+            current_scale = seal_ciphertext[0].scale
+            print(f"[Normalize] Escala actual: {current_scale}")
+            
             return reconstructed_ciphertext
 
         except Exception as e:
